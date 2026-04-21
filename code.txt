@@ -1,0 +1,238 @@
+pip install paho-mqtt
+
+https://micropython.org/download/rp2-pico-w/rp2-pico-w-latest.uf2
+
+
+# ---------- Test Rasberry Pi Pico W ----------
+# Blink with LED - "Hello world" for IoT
+from machine import Pin
+led = Pin("LED", Pin.OUT)
+led.value(1)
+led.value(0)
+
+
+
+from machine import Pin, PWM
+import time
+
+red = PWM(Pin(4))
+green = PWM(Pin(3))
+blue = PWM(Pin(2))
+
+for led in (red, green, blue):
+    led.freq(1000)
+
+def set_color(r, g, b):
+    # 0–65535 i MicroPython PWM
+    red.duty_u16(r)
+    green.duty_u16(g)
+    blue.duty_u16(b)
+
+while True:
+    set_color(65535, 0, 0)   # röd
+    time.sleep(1)
+
+    set_color(0, 65535, 0)   # grön
+    time.sleep(1)
+
+    set_color(0, 0, 65535)   # blå
+    time.sleep(1)
+
+    set_color(65535, 65535, 0)  # gul
+    time.sleep(1)
+
+    set_color(0, 0, 0)  # av
+    time.sleep(1)
+
+
+# ---------- Publisher 1 ----------
+# Simulate IoT-data and publish to broker/HiveMQ
+
+import time
+import json
+import random
+import paho.mqtt.client as mqtt
+
+# MQTT Broker
+broker = "URL"
+port = 8883
+username = "USERNAME"
+password = "PASSWORD"
+topic = "room1/environment1"
+
+client = mqtt.Client()
+client.username_pw_set(username, password)
+
+client.tls_set()
+
+client.connect(broker, port)
+print("MQTT connected")
+
+# Publish data
+for i in range(X):
+    
+    sensor_data = round(random.uniform(min, max), 2)
+
+    data = {
+        "device_id": "sensor_1",
+        "senor_data": sensor_data,
+        "timestamp": time.time()
+    }
+
+    payload = json.dumps(data)
+    client.publish(topic, payload)
+    print("Sent:", data)
+
+    time.sleep(2)
+
+
+# ---------- Wifi ----------
+# Connect your IoT-unit to wifi
+# network-connection.py
+
+import network
+Import time
+ssid = "DIN_WIFI" 
+password = "DITT_LÖSENORD"
+
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(ssid, password)
+
+while not wlan.isconnected():
+    time.sleep(1)
+
+
+# ---------- MQTT client ----------
+# Install MQTT client on your IoT-unit
+# To do this you first need an internet connection
+>>> import mip
+>>> mip.install(’umqtt.robust’)
+>>> mip.install(’umqtt.simple’)
+
+
+# ---------- Publisher 2 ----------
+# Read IoT-data and publish to broker/HiveMQ
+# MicroPython
+
+import network
+import time 
+from umqtt.simple import MQTTClient
+from machine import Pin
+
+# WiFi
+ssid = "DIN_WIFI"
+password = "DITT_LÖSENORD"
+
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(ssid, password)
+
+while not wlan.isconnected():
+    time.sleep(1)
+
+print("Connected to WiFi")
+
+
+# MQTT
+broker = "URL"
+server_hostname = "URL"
+port = 8883
+username = "USERNAME"
+password = "PASSWORD"
+topic = "room1/environment"
+
+def connectMQTT():
+    client = MQTTClient(client_id=b"pico_1",
+         server=broker,
+         port=port,
+         user=username,
+         password=password,
+         keepalive=7200,
+         ssl=True,
+         ssl_params={'server_hostname': server_hostname})
+    client.connect()
+    return client
+
+client = connectMQTT()
+
+# Sensor (placeholder)
+# https://docs.micropython.org/en/latest/library/machine.Pin.html#machine-pin
+pin_value = sensor.value()
+
+# Skicka data
+def publish(topic, value):
+    print(topic)
+    print(value)
+    client.publish(topic, value)
+    print("Publish done")
+    
+while True:
+    publish(topic,str(pin_value))
+    time.sleep(2)
+
+
+
+# ---------- Subscriber ----------
+# Connect to HiveMQ Cloud and subscribe to your topic
+# Note that MQTT is a real-time publish/subscribe-protocol
+
+import paho.mqtt.client as mqtt
+import json
+import csv
+import os
+
+# MQTT Broker
+broker = "URL"
+port = 8883
+username = "USERNAME"
+password = "PASSWORD"
+topic = "room1/environment1"
+
+# CSV-file
+filename = "iot_data.csv"
+
+if not os.path.exists(filename):
+    with open(filename, mode="w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["timestamp", "device_id", "temperature", "humidity", "alert"])
+
+
+# Write to CSV on message
+def on_message(client, userdata, msg):
+    data = json.loads(msg.payload.decode())
+
+    print("Received:", data)
+
+    with open(filename, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([
+            data["columnname"]
+        ])
+
+# MQTT callback
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code", rc)
+    client.subscribe(topic)
+
+
+# MQTT client
+client = mqtt.Client()
+client.username_pw_set(username, password)
+client.tls_set()
+
+client.on_connect = on_connect
+client.on_message = on_message
+
+client.connect(broker, port)
+
+print("Listening for data...")
+
+client.loop_forever()
+
+
+
+
+
+
+
